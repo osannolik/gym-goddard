@@ -3,26 +3,27 @@ import numpy as np
 
 class Drag(object):
 
+    D = 0.005
+    H = 1.0
+    H0 = 1000.0
+
     def __call__(self,v,h):
-        return max(0.0, (1.0-h/400.0) * v)
+        return self.D * v**2 * np.exp(self.H*(1.0-h/self.H0))
 
 class DragExtras(Drag):
 
-    @staticmethod
-    def dv(v,h):
-        return 1.0 - h/400.0
+    def dv(self,v,h):
+        return 2 * self.D * v * np.exp(self.H*(1.0-h/self.H0))
 
-    @staticmethod
-    def dh(v,h):
-        return -v/400.0
+    def dh(self,v,h):
+        return -self.D * v**2 *self.H/self.H0 * np.exp(self.H*(1.0-h/self.H0))
 
-    @staticmethod
-    def tilde_dv(v,h,gamma):
-        return gamma * (1.0-h/400.0)
+    def tilde_dv(self,v,h,gamma):
+        return 2 * self.D * (gamma*v+1.0) * np.exp(self.H*(1.0-h/self.H0))
 
-    @staticmethod
-    def tilde_dh(v,h,gamma):
-        return -1.0/400.0 - gamma * v / 400.0
+    def tilde_dh(self,v,h,gamma):
+        return -self.D * self.H/self.H0 * (gamma * v**2 + 2.0*v) * np.exp(self.H*(1.0-h/self.H0))
+
 
 PARAMS = {
     'v0': 0.0,      # Initial velocity
@@ -73,9 +74,11 @@ class GoddardEnv(gym.Env):
 
         u = 0.0 if is_tank_empty else action
 
+        drag = self._drag(v,h)
+
         # Forward Euler
         self._state = (
-            v + self._dt * ((u-self._drag(v,h))/m - self._g),
+            v + self._dt * ((u-np.sign(v)*drag)/m - self._g),
             h + self._dt * v,
             max(m + self._dt * (-self._gamma * u), self._m1)
         )
@@ -85,7 +88,7 @@ class GoddardEnv(gym.Env):
         reward = 0.0
         is_done = False
 
-        return self._observation(), reward, is_done, {}
+        return self._observation(), reward, is_done, {'u': u, 'drag': drag}
 
     def _observation(self):
         return np.array(self._state)
@@ -132,22 +135,21 @@ if __name__ == "__main__":
     (v, h, m) = godd.reset()
 
     v_log, h_log, m_log = [v], [h], [m]
-    u_log = []
+    extra_log = []
 
     hmax = h
 
-    time = np.array(range(500)) * PARAMS['dt']
+    time = np.arange(0, 30, PARAMS['dt'])
 
     for _ in time:
         u = oc.control(v,h,m)
 
-        u_log.append(u)
-
-        ((v, h, m), _, _, _) = godd.step(action = u)
+        ((v, h, m), _, _, extra) = godd.step(action = u)
 
         v_log.append(v)
         h_log.append(h)
         m_log.append(m)
+        extra_log.append([extra['u'], extra['drag']])
 
         hmax = max(hmax, h)
 
@@ -171,7 +173,7 @@ if __name__ == "__main__":
     ax3.grid(True)
     ax3.set(xlabel='time [s]', ylabel='rocket mass [kg]')
 
-    ax4.plot(time, u_log)
+    ax4.plot(time, extra_log)
     ax4.grid(True)
     ax4.set(xlabel='time [s]', ylabel='thrust [N]')
 
