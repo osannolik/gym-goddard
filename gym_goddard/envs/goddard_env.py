@@ -25,13 +25,23 @@ class DragExtras(Drag):
         return -self.D * self.H/self.H0 * (gamma * v**2 + 2.0*v) * np.exp(self.H*(1.0-h/self.H0))
 
 
+# Saturn V
+# Dry mass + fuel: 2.97e6 kg
+# Thrust of first stage: 35.1e6 N
+# => thust-to-weight ratio = 1.2
+# First stage gross and dry weight: 2.29e6 kg, 130e3 kg
+# => Saturn V gross weight immediately after first stage separation = 2.97e6 - 2.29e6 = 680e3 kg
+# Specific pulse: 263 s
+# => gamma = 1/(9.81*263) = 387e-6 kg/N/s
+# Burn time: 168 s
+
 PARAMS = {
     'v0': 0.0,      # Initial velocity
     'h0': 0.0,      # Initial height
-    'm0': 10.0,     # Initial weight (dry mass + fuel)
-    'm1': 1.0,      # Final weight (could be equal to dry mass if all fuel should be used)
-    'u_max': 196.2, # Maximum possible force of thrust [N]
-    'gamma': 0.01,  # Fuel consumption [kg/N/s]
+    'm0': 2.97e6,     # Initial weight (dry mass + fuel)
+    'm1': 680.0e3,      # Final weight (could be equal to dry mass if all fuel should be used)
+    'u_max': 1.2 * 2.97e6 * 9.81, # Maximum possible force of thrust [N]
+    'gamma': 387e-6,  # Fuel consumption [kg/N/s]
     'dt': 0.05,     # Assumed time [s] between calls to step()
     'g': 9.81       # Gravitational acceleration [m/s/s] (assumed constant as function of height)
 }
@@ -139,7 +149,7 @@ if __name__ == "__main__":
 
     hmax = h
 
-    time = np.arange(0, 30, PARAMS['dt'])
+    time = np.arange(0, 300, PARAMS['dt'])
 
     for _ in time:
         u = oc.control(v,h,m)
