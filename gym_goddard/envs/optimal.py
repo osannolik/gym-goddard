@@ -18,6 +18,8 @@ class DefaultControlled(env.Default):
     def Dtilde_dh(self,v,h):
         return -2.0 * self.D * self.H * v * np.exp(-self.H * h) + self.GAMMA * self.dh(v,h)
 
+    def dgdh(self, h):
+        return 0.0
 
 class SaturnVControlled(env.SaturnV):
 
@@ -31,6 +33,9 @@ class SaturnVControlled(env.SaturnV):
         return 2.0 * self.D * (1.0 + self.GAMMA * v)
 
     def Dtilde_dh(self,v,h):
+        return 0.0
+
+    def dgdh(self, h):
         return 0.0
 
 class OptimalController(object):
@@ -52,11 +57,11 @@ class OptimalController(object):
         if self._trig:
             # singular trajectory
             gdt = self._r.GAMMA*Dtilde
-            numerator = self._r.dh(v,h) - gdt*self._r.G - v*self._r.Dtilde_dh(v,h)
-            u = m*self._r.G + D + m*(numerator/(gdt+self._r.Dtilde_dv(v,h)))
+            numerator = self._r.dh(v,h) - gdt*self._r.g(h) - v*self._r.Dtilde_dh(v,h) + m*self._r.dgdh(h)
+            u = m*self._r.g(h) + D + m*(numerator/(gdt+self._r.Dtilde_dv(v,h)))
         else:
             # detect singular trajectory condition, i.e. == 0 or crosses 0 between samples
-            sing_traj = v * Dtilde - (D + m*self._r.G)
+            sing_traj = v * Dtilde - (D + m*self._r.g(h))
             self._trig = self._prev_sing_traj is not None and (sing_traj * self._prev_sing_traj <= 0.0)
             self._prev_sing_traj = sing_traj
             u = self._r.U_MAX

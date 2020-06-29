@@ -11,13 +11,15 @@ class Rocket(object):
         U_MAX:      Maximum possible force of thrust [N]
         GAMMA:      Fuel consumption [kg/N/s]
         DT:         Assumed time [s] between calls to step()
-        G:          Gravity is assumed to be constant as function of height
 
     '''
 
-    V0 = H0 = M0 = M1 = U_MAX = GAMMA = DT = G = None
+    V0 = H0 = M0 = M1 = U_MAX = GAMMA = DT = None
 
     def drag(self, v, h):
+        raise NotImplementedError
+
+    def g(self, h):
         raise NotImplementedError
 
 class Default(Rocket):
@@ -43,6 +45,9 @@ class Default(Rocket):
 
     def drag(self, v, h):
         return self.D * v**2 * np.exp(-self.H * h)
+
+    def g(self, h):
+        return self.G
 
 class SaturnV(Rocket):
 
@@ -76,6 +81,9 @@ class SaturnV(Rocket):
 
     def drag(self, v, h):
         return self.D * v**2
+
+    def g(self, h):
+        return self.G
 
 class GoddardEnv(gym.Env):
 
@@ -115,7 +123,7 @@ class GoddardEnv(gym.Env):
 
         # Forward Euler
         self._state = (
-            0.0 if h==self._r.H0 and v!=0.0 else (v + self._r.DT * ((u-np.sign(v)*drag)/m - self._r.G)),
+            0.0 if h==self._r.H0 and v!=0.0 else (v + self._r.DT * ((u-np.sign(v)*drag)/m - self._r.g(h))),
             max(h + self._r.DT * v, self._r.H0),
             max(m - self._r.DT * self._r.GAMMA * u, self._r.M1)
         )
