@@ -25,29 +25,34 @@ class Rocket(object):
 class Default(Rocket):
 
     '''
-        A toy rocket with unrealistically chosen parameters but that gives a
-        more interesting problem.
+        Models the rocket described in
+        https://www.mcs.anl.gov/~more/cops/bcops/rocket.html
+
+        The equations of motion is made dimensionless by scaling and choosing
+        the model parameters in terms of initial height, mass and gravity.
     '''
 
-    V0 = 0.0
-    H0 = 0.0
-    M0 = 10.0
-    M1 = 1.0
-    DT = 0.05
-    G = 9.81
-    GAMMA = 0.01
-    thrust_to_weight_ratio = 1.5
-    U_MAX = thrust_to_weight_ratio * M0 * G
+    DT = 0.001
 
-    D = 0.02
-    half_drag_height = 100.0
-    H = np.log(2) / half_drag_height
+    V0 = 0.0
+    H0 = M0 = G0 = 1.0
+    
+    HC = 500.0
+    MC = 0.6
+    VC = 620.0
+
+    M1 = MC * M0
+
+    thrust_to_weight_ratio = 3.5
+    U_MAX = thrust_to_weight_ratio * G0 * M0
+    DC = 0.5 * VC * M0 / G0
+    GAMMA = 1.0 / (0.5*np.sqrt(G0*H0))
 
     def drag(self, v, h):
-        return self.D * v**2 * np.exp(-self.H * h)
+        return self.DC * v * abs(v) * np.exp(-self.HC*(h-self.H0)/self.H0)
 
     def g(self, h):
-        return self.G
+        return self.G0 * (self.H0/h)**2
 
 class SaturnV(Rocket):
 
@@ -80,7 +85,7 @@ class SaturnV(Rocket):
     D = 0.51 * 0.27 * 113.0 / 2.0
 
     def drag(self, v, h):
-        return self.D * v**2
+        return self.D * v * abs(v)
 
     def g(self, h):
         return self.G
@@ -123,7 +128,7 @@ class GoddardEnv(gym.Env):
 
         # Forward Euler
         self._state = (
-            0.0 if h==self._r.H0 and v!=0.0 else (v + self._r.DT * ((u-np.sign(v)*drag)/m - self._r.g(h))),
+            0.0 if h==self._r.H0 and v!=0.0 else (v + self._r.DT * ((u-drag)/m - self._r.g(h))),
             max(h + self._r.DT * v, self._r.H0),
             max(m - self._r.DT * self._r.GAMMA * u, self._r.M1)
         )

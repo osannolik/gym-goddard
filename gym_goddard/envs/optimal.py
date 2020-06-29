@@ -5,21 +5,28 @@ import numpy as np
 class DefaultControlled(env.Default):
 
     def dv(self,v,h):
-        return 2.0 * self.D * v * np.exp(-self.H * h)
+        return 2.0 * self.DC * abs(v) * np.exp(-self.HC*(h-self.H0)/self.H0)
 
     def dh(self,v,h):
-        return -self.H * self.drag(v,h)
+        return -self.HC/self.H0 * self.drag(v,h)
 
-    # Dtilde = dv(v,h) + gamma * drag(v,h)
+    def dvdv(self,v,h):
+        return 2.0 * np.sign(v) * self.DC * np.exp(-self.HC*(h-self.H0)/self.H0)
+
+    def dvdh(self,v,h):
+        return -self.HC/self.H0 * self.dv(v,h)
+
+    def Dtilde(self,v,h):
+        return self.dv(v,h) + self.GAMMA * self.drag(v,h)
 
     def Dtilde_dv(self,v,h):
-        return 2.0 * self.D * np.exp(-self.H * h) + self.GAMMA * self.dv(v,h)
+        return self.dvdv(v,h) + self.GAMMA * self.dv(v,h)
 
     def Dtilde_dh(self,v,h):
-        return -2.0 * self.D * self.H * v * np.exp(-self.H * h) + self.GAMMA * self.dh(v,h)
+        return self.dvdh(v,h) + self.GAMMA * self.dh(v,h)
 
     def dgdh(self, h):
-        return 0.0
+        return -2.0 * self.G0 * self.H0**2 / h**3
 
 class SaturnVControlled(env.SaturnV):
 
@@ -49,16 +56,17 @@ class OptimalController(object):
         self._r = rocket
         self._trig = False
         self._prev_sing_traj = None
+        self.EPS = np.finfo(float).eps
 
     def control(self, v, h, m):
         D = self._r.drag(v,h)
-        Dtilde = self._r.dv(v,h) + self._r.GAMMA*D
+        Dtilde = self._r.Dtilde(v,h)
 
         if self._trig:
             # singular trajectory
             gdt = self._r.GAMMA*Dtilde
             numerator = self._r.dh(v,h) - gdt*self._r.g(h) - v*self._r.Dtilde_dh(v,h) + m*self._r.dgdh(h)
-            u = m*self._r.g(h) + D + m*(numerator/(gdt+self._r.Dtilde_dv(v,h)))
+            u = m*self._r.g(h) + D + m*(numerator/(gdt+self._r.Dtilde_dv(v,h)+self.EPS))
         else:
             # detect singular trajectory condition, i.e. == 0 or crosses 0 between samples
             sing_traj = v * Dtilde - (D + m*self._r.g(h))
@@ -71,7 +79,7 @@ class OptimalController(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run a rocket simulation with an optimal controller.')
     parser.add_argument('-r', '--rocket', default='default', choices=['default', 'saturn'], help='The rocket model to use')
-    parser.add_argument('-t', '--time', default=40, type=int, help='Simulation duration time [s]')
+    parser.add_argument('-t', '--time', default=0.4, type=float, help='Simulation duration time [s]')
 
     args = parser.parse_args()
 
