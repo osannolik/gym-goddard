@@ -106,7 +106,7 @@ if __name__ == "__main__":
         (state, _, _, extra) = godd.step(action=oc.control(v, h, m))
         v, h, m = state
         state_log.append(state)
-        extra_log.append([extra['u'], extra['drag']])
+        extra_log.append([extra['u'], extra['drag'], extra['g']])
 
         hmax = max(hmax, h)
 

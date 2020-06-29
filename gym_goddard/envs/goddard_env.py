@@ -125,10 +125,11 @@ class GoddardEnv(gym.Env):
         u = 0.0 if is_tank_empty else action
 
         drag = self._r.drag(v,h)
+        g = self._r.g(h)
 
         # Forward Euler
         self._state = (
-            0.0 if h==self._r.H0 and v!=0.0 else (v + self._r.DT * ((u-drag)/m - self._r.g(h))),
+            0.0 if h==self._r.H0 and v!=0.0 else (v + self._r.DT * ((u-drag)/m - g)),
             max(h + self._r.DT * v, self._r.H0),
             max(m - self._r.DT * self._r.GAMMA * u, self._r.M1)
         )
@@ -138,7 +139,7 @@ class GoddardEnv(gym.Env):
         reward = 0.0
         is_done = False
 
-        return self._observation(), reward, is_done, {'u': u, 'drag': drag}
+        return self._observation(), reward, is_done, {'u': u, 'drag': drag, 'g': g}
 
     def _observation(self):
         return np.array(self._state)
