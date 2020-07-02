@@ -25,7 +25,8 @@ class Rocket(object):
 class Default(Rocket):
 
     '''
-        Models the rocket described in
+        Models the surface-to-air missile (SA-2 Guideline) described in
+        http://dcsl.gatech.edu/papers/jgcd92.pdf
         https://www.mcs.anl.gov/~more/cops/bcops/rocket.html
 
         The equations of motion is made dimensionless by scaling and choosing

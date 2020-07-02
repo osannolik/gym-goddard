@@ -16,15 +16,6 @@ class DefaultControlled(env.Default):
     def dvdh(self,v,h):
         return -self.HC/self.H0 * self.dv(v,h)
 
-    def Dtilde(self,v,h):
-        return self.dv(v,h) + self.GAMMA * self.drag(v,h)
-
-    def Dtilde_dv(self,v,h):
-        return self.dvdv(v,h) + self.GAMMA * self.dv(v,h)
-
-    def Dtilde_dh(self,v,h):
-        return self.dvdh(v,h) + self.GAMMA * self.dh(v,h)
-
     def dgdh(self, h):
         return -2.0 * self.G0 * self.H0**2 / h**3
 
@@ -36,10 +27,10 @@ class SaturnVControlled(env.SaturnV):
     def dh(self,v,h):
         return 0.0
 
-    def Dtilde_dv(self,v,h):
-        return 2.0 * self.D * (1.0 + self.GAMMA * v)
+    def dvdv(self,v,h):
+        return 2.0 * self.D
 
-    def Dtilde_dh(self,v,h):
+    def dvdh(self,v,h):
         return 0.0
 
     def dgdh(self, h):
@@ -58,15 +49,24 @@ class OptimalController(object):
         self._prev_sing_traj = None
         self.EPS = np.finfo(float).eps
 
+    def Dtilde(self,v,h):
+        return self._r.dv(v,h) + self._r.GAMMA * self._r.drag(v,h)
+
+    def Dtilde_dv(self,v,h):
+        return self._r.dvdv(v,h) + self._r.GAMMA * self._r.dv(v,h)
+
+    def Dtilde_dh(self,v,h):
+        return self._r.dvdh(v,h) + self._r.GAMMA * self._r.dh(v,h)
+
     def control(self, v, h, m):
         D = self._r.drag(v,h)
-        Dtilde = self._r.Dtilde(v,h)
+        Dtilde = self.Dtilde(v,h)
 
         if self._trig:
             # singular trajectory
             gdt = self._r.GAMMA*Dtilde
-            numerator = self._r.dh(v,h) - gdt*self._r.g(h) - v*self._r.Dtilde_dh(v,h) + m*self._r.dgdh(h)
-            u = m*self._r.g(h) + D + m*(numerator/(gdt+self._r.Dtilde_dv(v,h)+self.EPS))
+            numerator = self._r.dh(v,h) - gdt*self._r.g(h) - v*self.Dtilde_dh(v,h) + m*self._r.dgdh(h)
+            u = m*self._r.g(h) + D + m*(numerator/(gdt+self.Dtilde_dv(v,h)+self.EPS))
         else:
             # detect singular trajectory condition, i.e. == 0 or crosses 0 between samples
             sing_traj = v * Dtilde - (D + m*self._r.g(h))
