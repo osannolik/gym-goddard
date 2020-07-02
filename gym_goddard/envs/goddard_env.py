@@ -83,7 +83,7 @@ class SaturnV(Rocket):
     # Specific pulse: 263 s
     GAMMA = 1.0/(G*263.0) # = 387e-6 kg/N/s
 
-    D = 0.51 * 0.27 * 113.0 / 2.0
+    D = 0.35 * 0.27 * 113.0 / 2.0
 
     def drag(self, v, h):
         return self.D * v * abs(v)

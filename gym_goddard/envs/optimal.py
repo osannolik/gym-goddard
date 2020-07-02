@@ -22,7 +22,7 @@ class DefaultControlled(env.Default):
 class SaturnVControlled(env.SaturnV):
 
     def dv(self,v,h):
-        return 2.0 * self.D * v
+        return 2.0 * self.D * abs(v)
 
     def dh(self,v,h):
         return 0.0
