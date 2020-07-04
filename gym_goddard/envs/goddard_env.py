@@ -153,3 +153,5 @@ class GoddardEnv(gym.Env):
     def render(self, mode='human', close=False):
         print('v, h, m = {}'.format(self._state))
 
+    def close(self):
+        pass
