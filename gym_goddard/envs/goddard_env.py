@@ -16,6 +16,8 @@ class Rocket(object):
 
     V0 = H0 = M0 = M1 = U_MAX = GAMMA = DT = None
 
+    H_MAX_RENDER = None # Sets upper window bound for rendering
+
     def drag(self, v, h):
         raise NotImplementedError
 
@@ -37,7 +39,9 @@ class Default(Rocket):
 
     V0 = 0.0
     H0 = M0 = G0 = 1.0
-    
+
+    H_MAX_RENDER = 1.015
+
     HC = 500.0
     MC = 0.6
     VC = 620.0
@@ -66,10 +70,12 @@ class SaturnV(Rocket):
 
     '''
 
-    DT = 0.05
+    DT = 0.5
     G = 9.81
     V0 = 0.0
     H0 = 0.0
+
+    H_MAX_RENDER = 170e3
 
     # Vehicle mass + fuel: 2.97e6 kg
     # Thrust of first stage: 35.1e6 N
@@ -119,6 +125,9 @@ class GoddardEnv(gym.Env):
 
         self.reset()
 
+    def extras_labels(self):
+        return ['thrust', 'drag', 'gravity']
+
     def step(self, action):        
         v, h, m = self._state
 
@@ -138,19 +147,24 @@ class GoddardEnv(gym.Env):
             max(m - self._r.DT * self._r.GAMMA * u, self._r.M1)
         )
 
-        self._h_max = h if self._h_max is None else max(self._h_max, self._state[1])
+        self._h_max = max(self._h_max, self._state[1])
 
         reward = 0.0
         is_done = False
 
-        return self._observation(), reward, is_done, {'u': u, 'drag': drag, 'g': g}
+        extras = dict(zip(self.extras_labels(), [u, drag, g]))
+
+        return self._observation(), reward, is_done, extras
+
+    def maximum_altitude(self):
+        return self._h_max
 
     def _observation(self):
         return np.array(self._state)
 
     def reset(self):
         self._state = (self._r.V0, self._r.H0, self._r.M0)
-        self._h_max = None
+        self._h_max = self._r.H0
         self._u_last = None
         return self._observation()
 
@@ -159,8 +173,8 @@ class GoddardEnv(gym.Env):
 
         if self.viewer is None:
             from gym.envs.classic_control import rendering
-            y = 1.02
-            y0 = 1.0
+            y = self._r.H_MAX_RENDER
+            y0 = self._r.H0
             GY = (y-y0)/20
             Y = y-y0+GY
             H = Y/10

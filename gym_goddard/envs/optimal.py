@@ -78,14 +78,15 @@ class OptimalController(object):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run a rocket simulation with an optimal controller.')
-    parser.add_argument('-r', '--rocket', default='default', choices=['default', 'saturn'], help='The rocket model to use')
+    parser.add_argument('-r', '--rocket', default='default', choices=['default', 'saturnv'], help='The rocket model to use')
     parser.add_argument('-t', '--time', default=0.4, type=float, help='Simulation duration time [s]')
+    parser.add_argument('--render', action="store_true", help='Enable rendering')
 
     args = parser.parse_args()
 
     if args.rocket == 'default':
         rocket = DefaultControlled()
-    elif args.rocket == 'saturn':
+    elif args.rocket == 'saturnv':
         rocket = SaturnVControlled()
 
     godd = env.GoddardEnv(rocket)
@@ -98,7 +99,6 @@ if __name__ == "__main__":
     extra_log = []
 
     v, h, m = state
-    hmax = h
 
     time = np.arange(0, args.time, rocket.DT)
 
@@ -106,13 +106,12 @@ if __name__ == "__main__":
         (state, _, _, extra) = godd.step(action=oc.control(v, h, m))
         v, h, m = state
         state_log.append(state)
-        extra_log.append([extra['u'], extra['drag'], extra['g']])
+        extra_log.append(list(extra.values()))
 
-        hmax = max(hmax, h)
+        if args.render:
+            godd.render()
 
-        godd.render()
-
-    print("h_max = {}".format(hmax))
+    print("Maximum altitude reached: {}".format(godd.maximum_altitude()))
 
     import matplotlib.pyplot as plt
 
@@ -122,18 +121,21 @@ if __name__ == "__main__":
 
     ax1.plot(time, state_log[:-1,1])
     ax1.grid(True)
-    ax1.set(xlabel='time [s]', ylabel='height [m]')
+    ax1.set(xlabel='time [s]', ylabel='Altitude [m]')
 
     ax2.plot(time, state_log[:-1,0])
     ax2.grid(True)
-    ax2.set(xlabel='time [s]', ylabel='velocity [m/s]')
+    ax2.set(xlabel='time [s]', ylabel='Velocity [m/s]')
 
     ax3.plot(time, state_log[:-1,2])
     ax3.grid(True)
-    ax3.set(xlabel='time [s]', ylabel='rocket mass [kg]')
+    ax3.set(xlabel='time [s]', ylabel='Rocket Mass [kg]')
 
     ax4.plot(time, extra_log)
     ax4.grid(True)
-    ax4.set(xlabel='time [s]', ylabel='thrust [N]')
+    ax4.set(xlabel='time [s]', ylabel='Forces [N]')
+    ax4.legend(godd.extras_labels(), loc='upper right')
 
     plt.show()
+
+    godd.close()
