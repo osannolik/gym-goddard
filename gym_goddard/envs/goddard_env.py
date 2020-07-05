@@ -99,6 +99,7 @@ class GoddardEnv(gym.Env):
         super(GoddardEnv, self).__init__()
 
         self._r = rocket
+        self.viewer = None
 
         # Thrust force
         self.action_space = gym.spaces.Box(
@@ -125,6 +126,8 @@ class GoddardEnv(gym.Env):
 
         u = 0.0 if is_tank_empty else action
 
+        self._u_last = u
+
         drag = self._r.drag(v,h)
         g = self._r.g(h)
 
@@ -135,7 +138,7 @@ class GoddardEnv(gym.Env):
             max(m - self._r.DT * self._r.GAMMA * u, self._r.M1)
         )
 
-        self._h_max = max(self._h_max, self._state[1])
+        self._h_max = h if self._h_max is None else max(self._h_max, self._state[1])
 
         reward = 0.0
         is_done = False
@@ -147,11 +150,64 @@ class GoddardEnv(gym.Env):
 
     def reset(self):
         self._state = (self._r.V0, self._r.H0, self._r.M0)
-        self._h_max = self._r.H0
+        self._h_max = None
+        self._u_last = None
         return self._observation()
 
-    def render(self, mode='human', close=False):
-        print('v, h, m = {}'.format(self._state))
+    def render(self, mode='human'):
+        _, h, _ = self._observation()
+
+        if self.viewer is None:
+            from gym.envs.classic_control import rendering
+            y = 1.02
+            y0 = 1.0
+            GY = (y-y0)/20
+            Y = y-y0+GY
+            H = Y/10
+            W = H/10
+            self.flame_offset = W/2
+
+            self.viewer = rendering.Viewer(500, 500)
+            self.viewer.set_bounds(left=-Y/2, right=Y/2, bottom=y-Y, top=y)
+
+            ground = rendering.make_polygon([(-Y/2,y0-GY), (-Y/2,y0), (Y/2,y0), (Y/2,y0-GY)])
+            ground.set_color(.3, .6, .3)
+            pad = rendering.make_polygon([(-3*W,y0-GY/3), (-3*W,y0), (3*W,y0), (3*W,y0-GY/3)])
+            pad.set_color(.6, .6, .6)
+
+            rocket = rendering.make_polygon([(-W/2,0), (-W/2,H), (W/2,H), (W/2,0)])
+            rocket.set_color(.2, .2, .2)
+            self.r_trans = rendering.Transform()
+            rocket.add_attr(self.r_trans)
+            
+            flame = rendering.make_circle(radius=W, res=30)
+            flame.set_color(.96, 0.85, 0.35)
+            self.f_trans = rendering.Transform()
+            flame.add_attr(self.f_trans)
+
+            flame_outer = rendering.make_circle(radius=2*W, res=30)
+            flame_outer.set_color(.95, 0.5, 0.2)
+            self.fo_trans = rendering.Transform()
+            flame_outer.add_attr(self.fo_trans)
+
+            self.viewer.add_geom(ground)
+            self.viewer.add_geom(pad)
+            self.viewer.add_geom(rocket)
+            self.viewer.add_geom(flame_outer)
+            self.viewer.add_geom(flame)
+
+        self.r_trans.set_translation(newx=0, newy=h)
+        self.f_trans.set_translation(newx=0, newy=h)
+        self.fo_trans.set_translation(newx=0, newy=h-self.flame_offset)
+
+        s = 0 if self._u_last is None else self._u_last/self._r.U_MAX
+        
+        self.f_trans.set_scale(newx=s, newy=s)
+        self.fo_trans.set_scale(newx=s, newy=s)
+
+        return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 
     def close(self):
-        pass
+        if self.viewer:
+            self.viewer.close()
+            self.viewer = None
