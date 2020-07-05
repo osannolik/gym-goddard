@@ -169,7 +169,7 @@ class GoddardEnv(gym.Env):
         return self._observation()
 
     def render(self, mode='human'):
-        _, h, _ = self._observation()
+        _, h, m = self._observation()
 
         if self.viewer is None:
             from gym.envs.classic_control import rendering
@@ -189,11 +189,21 @@ class GoddardEnv(gym.Env):
             pad = rendering.make_polygon([(-3*W,y0-GY/3), (-3*W,y0), (3*W,y0), (3*W,y0-GY/3)])
             pad.set_color(.6, .6, .6)
 
-            rocket = rendering.make_polygon([(-W/2,0), (-W/2,H), (W/2,H), (W/2,0)])
-            rocket.set_color(.2, .2, .2)
+            rocket = rendering.make_polygon([(-W/2,0), (-W/2,H), (W/2,H), (W/2,0)], filled=True)
+            rocket.set_color(0, 0, 0)
             self.r_trans = rendering.Transform()
             rocket.add_attr(self.r_trans)
-            
+
+            self.make_fuel_poly = lambda mass: [
+                (-W/2, 0),
+                (-W/2, H*((mass-self._r.M1)/(self._r.M0-self._r.M1))),
+                (W/2,  H*((mass-self._r.M1)/(self._r.M0-self._r.M1))),
+                (W/2,0)
+            ]
+            self.fuel = rendering.make_polygon(self.make_fuel_poly(m), filled=True)
+            self.fuel.set_color(.8, .1, .14)
+            self.fuel.add_attr(self.r_trans)
+
             flame = rendering.make_circle(radius=W, res=30)
             flame.set_color(.96, 0.85, 0.35)
             self.f_trans = rendering.Transform()
@@ -204,15 +214,14 @@ class GoddardEnv(gym.Env):
             self.fo_trans = rendering.Transform()
             flame_outer.add_attr(self.fo_trans)
 
-            self.viewer.add_geom(ground)
-            self.viewer.add_geom(pad)
-            self.viewer.add_geom(rocket)
-            self.viewer.add_geom(flame_outer)
-            self.viewer.add_geom(flame)
+            for g in [ground, pad, rocket, self.fuel, flame_outer, flame]:
+                self.viewer.add_geom(g)
 
         self.r_trans.set_translation(newx=0, newy=h)
         self.f_trans.set_translation(newx=0, newy=h)
         self.fo_trans.set_translation(newx=0, newy=h-self.flame_offset)
+
+        self.fuel.v = self.make_fuel_poly(m)
 
         s = 0 if self._u_last is None else self._u_last/self._r.U_MAX
         
