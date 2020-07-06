@@ -101,22 +101,21 @@ class GoddardEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, rocket=Rocket()):
+    def __init__(self, rocket=Default()):
         super(GoddardEnv, self).__init__()
 
         self._r = rocket
         self.viewer = None
 
-        # Thrust force
+        self.U_INDEX = 0
         self.action_space = gym.spaces.Box(
             low   = np.array([0.0]),
             high  = np.array([self._r.U_MAX]),
+            shape = (1,),
             dtype = np.float
         )
 
-        # 0: velocity
-        # 1: altitude/height
-        # 2: rocket mass
+        self.V_INDEX, self.H_INDEX, self.M_INDEX = 0, 1, 2
         self.observation_space = gym.spaces.Box(
             low   = np.array([np.finfo(np.float).min, 0.0, self._r.M1]),
             high  = np.array([np.finfo(np.float).max, np.finfo(np.float).max, self._r.M0]),
@@ -128,12 +127,12 @@ class GoddardEnv(gym.Env):
     def extras_labels(self):
         return ['thrust', 'drag', 'gravity']
 
-    def step(self, action):        
+    def step(self, action):
         v, h, m = self._state
 
         is_tank_empty = (m <= self._r.M1)
 
-        u = 0.0 if is_tank_empty else action
+        u = 0.0 if is_tank_empty else action[self.U_INDEX]
 
         self._u_last = u
 
@@ -147,7 +146,7 @@ class GoddardEnv(gym.Env):
             max(m - self._r.DT * self._r.GAMMA * u, self._r.M1)
         )
 
-        self._h_max = max(self._h_max, self._state[1])
+        self._h_max = max(self._h_max, self._state[self.H_INDEX])
 
         reward = 0.0
         is_done = False

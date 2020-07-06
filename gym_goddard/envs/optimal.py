@@ -103,7 +103,7 @@ if __name__ == "__main__":
     time = np.arange(0, args.time, rocket.DT)
 
     for _ in time:
-        (state, _, _, extra) = godd.step(action=oc.control(v, h, m))
+        (state, _, _, extra) = godd.step(action=[oc.control(v, h, m)])
         v, h, m = state
         state_log.append(state)
         extra_log.append(list(extra.values()))
