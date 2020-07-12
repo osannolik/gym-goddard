@@ -125,7 +125,7 @@ class GoddardEnv(gym.Env):
         self.reset()
 
     def extras_labels(self):
-        return ['thrust', 'drag', 'gravity']
+        return ['action', 'thrust', 'drag', 'gravity']
 
     def step(self, action):
         v, h, m = self._state
@@ -148,10 +148,16 @@ class GoddardEnv(gym.Env):
 
         self._h_max = max(self._h_max, self._state[self.H_INDEX])
 
-        reward = 0.0
-        is_done = False
+        is_done = bool(
+            is_tank_empty and self._state[self.V_INDEX] < 0 and self._h_max > self._r.H0
+        )
 
-        extras = dict(zip(self.extras_labels(), [u, drag, g]))
+        if is_done:
+            reward = self._h_max - self._r.H0
+        else:
+            reward = 0.0
+
+        extras = dict(zip(self.extras_labels(), [action[self.U_INDEX], u, drag, g]))
 
         return self._observation(), reward, is_done, extras
 
