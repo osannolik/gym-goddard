@@ -97,14 +97,22 @@ if __name__ == "__main__":
 
     state_log = [state]
     extra_log = []
+    reward = 0
+    reward_end = None
 
     v, h, m = state
 
     time = np.arange(0, args.time, rocket.DT)
 
     for _ in time:
-        (state, _, _, extra) = godd.step(action=[oc.control(v, h, m)])
+        (state, r, is_done, extra) = godd.step(action=[oc.control(v, h, m)])
         v, h, m = state
+    
+        if reward_end is None:
+            reward += r
+            if is_done:
+                reward_end = r
+
         state_log.append(state)
         extra_log.append(list(extra.values()))
 
@@ -112,6 +120,8 @@ if __name__ == "__main__":
             godd.render()
 
     print("Maximum altitude reached: {}".format(godd.maximum_altitude()))
+    print("End reward: {}".format(reward_end))
+    print("Total reward: {}".format(reward))
 
     import matplotlib.pyplot as plt
 
