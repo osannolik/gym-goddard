@@ -8,13 +8,13 @@ class Rocket(object):
 
         V0/H0/M0:   Initial velocity/height/weight
         M1:         Final weight (set equal to dry mass if all fuel should be used)
-        U_MAX:      Maximum possible force of thrust [N]
+        THRUST_MAX: Maximum possible force of thrust [N]
         GAMMA:      Fuel consumption [kg/N/s]
         DT:         Assumed time [s] between calls to step()
 
     '''
 
-    V0 = H0 = M0 = M1 = U_MAX = GAMMA = DT = None
+    V0 = H0 = M0 = M1 = THRUST_MAX = GAMMA = DT = None
 
     H_MAX_RENDER = None # Sets upper window bound for rendering
 
@@ -49,7 +49,7 @@ class Default(Rocket):
     M1 = MC * M0
 
     thrust_to_weight_ratio = 3.5
-    U_MAX = thrust_to_weight_ratio * G0 * M0
+    THRUST_MAX = thrust_to_weight_ratio * G0 * M0
     DC = 0.5 * VC * M0 / G0
     GAMMA = 1.0 / (0.5*np.sqrt(G0*H0))
 
@@ -80,7 +80,7 @@ class SaturnV(Rocket):
     # Vehicle mass + fuel: 2.97e6 kg
     # Thrust of first stage: 35.1e6 N
     M0 = 2.97e6
-    U_MAX = 35.1e6
+    THRUST_MAX = 35.1e6
 
     # First stage gross and dry weight: 2.29e6 kg, 130e3 kg
     # => Saturn V gross weight immediately before first stage separation
@@ -110,7 +110,7 @@ class GoddardEnv(gym.Env):
         self.U_INDEX = 0
         self.action_space = gym.spaces.Box(
             low   = np.array([0.0]),
-            high  = np.array([self._r.U_MAX]),
+            high  = np.array([1.0]),
             shape = (1,),
             dtype = np.float
         )
@@ -132,18 +132,19 @@ class GoddardEnv(gym.Env):
 
         is_tank_empty = (m <= self._r.M1)
 
-        u = 0.0 if is_tank_empty else action[self.U_INDEX]
+        a = 0.0 if is_tank_empty else action[self.U_INDEX]
+        thrust = self._r.THRUST_MAX*a
 
-        self._u_last = u
+        self._thrust_last = thrust
 
         drag = self._r.drag(v,h)
         g = self._r.g(h)
 
         # Forward Euler
         self._state = (
-            0.0 if h==self._r.H0 and v!=0.0 else (v + self._r.DT * ((u-drag)/m - g)),
+            0.0 if h==self._r.H0 and v!=0.0 else (v + self._r.DT * ((thrust-drag)/m - g)),
             max(h + self._r.DT * v, self._r.H0),
-            max(m - self._r.DT * self._r.GAMMA * u, self._r.M1)
+            max(m - self._r.DT * self._r.GAMMA * thrust, self._r.M1)
         )
 
         self._h_max = max(self._h_max, self._state[self.H_INDEX])
@@ -157,7 +158,7 @@ class GoddardEnv(gym.Env):
         else:
             reward = 0.0
 
-        extras = dict(zip(self.extras_labels(), [action[self.U_INDEX], u, drag, g]))
+        extras = dict(zip(self.extras_labels(), [action[self.U_INDEX], thrust, drag, g]))
 
         return self._observation(), reward, is_done, extras
 
@@ -170,7 +171,7 @@ class GoddardEnv(gym.Env):
     def reset(self):
         self._state = (self._r.V0, self._r.H0, self._r.M0)
         self._h_max = self._r.H0
-        self._u_last = None
+        self._thrust_last = None
         return self._observation()
 
     def render(self, mode='human'):
@@ -228,7 +229,7 @@ class GoddardEnv(gym.Env):
 
         self.fuel.v = self.make_fuel_poly(m)
 
-        s = 0 if self._u_last is None else self._u_last/self._r.U_MAX
+        s = 0 if self._thrust_last is None else self._thrust_last/self._r.THRUST_MAX
         
         self.f_trans.set_scale(newx=s, newy=s)
         self.fo_trans.set_scale(newx=s, newy=s)

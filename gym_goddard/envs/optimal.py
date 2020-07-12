@@ -72,9 +72,9 @@ class OptimalController(object):
             sing_traj = v * Dtilde - (D + m*self._r.g(h))
             self._trig = self._prev_sing_traj is not None and (sing_traj * self._prev_sing_traj <= 0.0)
             self._prev_sing_traj = sing_traj
-            u = self._r.U_MAX
+            u = self._r.THRUST_MAX
 
-        return max(0.0, min(self._r.U_MAX, u))
+        return max(0.0, min(1.0, u/self._r.THRUST_MAX))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run a rocket simulation with an optimal controller.')
