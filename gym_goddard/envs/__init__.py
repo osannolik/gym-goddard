@@ -1,1 +1,1 @@
-from gym_goddard.envs.goddard_env import GoddardEnv
+from gym_goddard.envs.goddard_env import GoddardDefaultEnv, GoddardSaturnEnv

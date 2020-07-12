@@ -239,3 +239,13 @@ class GoddardEnv(gym.Env):
         if self.viewer:
             self.viewer.close()
             self.viewer = None
+
+class GoddardDefaultEnv(GoddardEnv):
+
+    def __init__(self):
+        super(GoddardDefaultEnv, self).__init__(rocket=Default())
+
+class GoddardSaturnEnv(GoddardEnv):
+
+    def __init__(self):
+        super(GoddardSaturnEnv, self).__init__(rocket=SaturnV())
