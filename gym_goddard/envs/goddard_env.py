@@ -99,7 +99,10 @@ class SaturnV(Rocket):
 
 class GoddardEnv(gym.Env):
 
-    metadata = {'render.modes': ['human']}
+    metadata = {
+        'render.modes': ['human', 'rgb_array'],
+        'video.frames_per_second': 30
+    }
 
     def __init__(self, rocket=Default()):
         super(GoddardEnv, self).__init__()
