@@ -10,6 +10,8 @@ The state, and the gym's observation space, of the rocket is its vertical positi
 
 The rocket engine is assumed to be throttled such that the thrust can be continuously controlled between 0 to some maximum limit.
 
+![alt text](animation.gif)
+
 ## Installation
 
 ```bash
