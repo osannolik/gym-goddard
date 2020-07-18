@@ -31,3 +31,7 @@ while True:
     obs, reward, done, info = env.step(action=env.action_space.high)
     env.render('human')
 ````
+
+## Solution
+
+It is, under certain conditions, possible to solve the problem analytically. Please see [this notebook](gym_goddard/envs/optimal_control.ipynb) for details.
